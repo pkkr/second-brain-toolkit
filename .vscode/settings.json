@@ -1,0 +1,13 @@
+{
+    "foam.completion.linkFormat": "link",
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "files.watcherExclude": {
+        "**/.venv/**": true
+    },
+    "search.exclude": {
+        "**/.venv": true
+    },
+    "[markdown]": {
+        "editor.wordWrap": "on"
+    }
+}

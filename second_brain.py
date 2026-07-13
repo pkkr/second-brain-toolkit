@@ -315,8 +315,8 @@ def initialize_brain(root: Path, initialize_git: bool = False) -> list[Path]:
         root / "README.md": (
             "# Private Second Brain\n\n"
             "This directory contains personal project memory created by Second Brain Toolkit.\n"
-            "Keep any Git remote for this directory private. The surrounding toolkit repository\n"
-            "ignores this directory.\n"
+            "Keep its Git repository and any remote private. Access it through ~/.second-brain\n"
+            "so agent instructions remain independent of its physical location.\n"
         ),
     }
     for destination, content in files.items():

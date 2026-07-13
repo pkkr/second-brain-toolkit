@@ -10,7 +10,7 @@ All notable changes to this project are documented here.
 
 ## 0.2.0 – 2026-07-14
 
-- Separated public toolkit code from ignored private user data.
+- Separated the public toolkit from the private user-data repository.
 - Added the `second-brain` CLI with initialization, generation,
   validation, diagnostics, project/process creation, task archiving, and
   managed upgrades.

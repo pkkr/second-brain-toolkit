@@ -5,7 +5,7 @@ __pycache__/
 /build/
 /dist/
 
-# Personal Second Brain data (may contain its own private Git repository)
+# Optional in-repository fallback for personal data
 /private/
 
 # OS

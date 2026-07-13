@@ -26,8 +26,9 @@ python3 -m venv .venv
 ```
 
 Commit generated indexes when their source notes change. Never include
-personal files from `private/`, real project data, credentials, or
-secrets in an issue, test fixture, commit, or pull request.
+files from a personal Second Brain repository, real project data,
+credentials, or secrets in an issue, test fixture, commit, or pull
+request.
 
 Changes to the data layout must update the schema version, migration
 guide, changelog, examples, and tests together.

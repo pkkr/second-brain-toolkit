@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Installs the toolkit and initializes an ignored private data directory.
+# Installs the public toolkit and connects a separate private data repository.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-DATA_DIR="$PWD/private"
+DATA_DIR="$HOME/second-brain"
 DRY_RUN=0
 LINK_AGENTS=1
 INIT_GIT=0
@@ -14,7 +14,7 @@ usage() {
 Usage: ./setup.sh [options]
 
 Options:
-  --data-dir PATH    Private data directory (default: ./private)
+  --data-dir PATH    Private data repository (default: ~/second-brain)
   --init-git         Initialize the private data directory as its own Git repo
   --no-agent-links   Do not configure Claude Code or GitHub Copilot links
   --replace-links    Replace existing agent symlinks that point elsewhere
@@ -114,7 +114,7 @@ elif [ -e "$ALIAS_PATH" ]; then
     exit 1
 fi
 
-# 3. Private data, kept outside the public repository's history
+# 3. Private data, kept in a separate repository by default
 INIT_ARGS=(init "$DATA_DIR")
 if [ "$INIT_GIT" -eq 1 ]; then
     INIT_ARGS+=(--git)
@@ -184,7 +184,7 @@ fi
 
 echo
 echo "Done. Personal data stays in: $DATA_DIR"
-echo "The public toolkit repository ignores that directory."
+echo "The public toolkit repository does not track that directory."
 if [ "$INIT_GIT" -eq 1 ]; then
     echo "Only connect the private data repository to a private remote."
 fi

@@ -7,7 +7,7 @@ applyTo: '**'
 
 # Second Brain (applies to every project)
 
-At the start of work, read `~/second-brain/AGENTS.md` and follow it. If
+At the start of work, read `~/.second-brain/AGENTS.md` and follow it. If
 that file is unavailable, use this compact fallback:
 
 - Identify the current project through `git remote get-url origin`, then

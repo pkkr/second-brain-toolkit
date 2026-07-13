@@ -1,41 +1,190 @@
 #!/usr/bin/env bash
-# Sets up the Second Brain on a new machine. Idempotent.
+# Installs the toolkit and initializes an ignored private data directory.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# 1. Python venv
+DATA_DIR="$PWD/private"
+DRY_RUN=0
+LINK_AGENTS=1
+INIT_GIT=0
+REPLACE_LINKS=0
+
+usage() {
+    cat <<'EOF'
+Usage: ./setup.sh [options]
+
+Options:
+  --data-dir PATH    Private data directory (default: ./private)
+  --init-git         Initialize the private data directory as its own Git repo
+  --no-agent-links   Do not configure Claude Code or GitHub Copilot links
+  --replace-links    Replace existing agent symlinks that point elsewhere
+  --dry-run          Show the planned locations without changing anything
+  -h, --help         Show this help
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --data-dir)
+            [ "$#" -ge 2 ] || { echo "ERROR: --data-dir needs a path" >&2; exit 2; }
+            DATA_DIR="$2"
+            shift 2
+            ;;
+        --init-git)
+            INIT_GIT=1
+            shift
+            ;;
+        --no-agent-links)
+            LINK_AGENTS=0
+            shift
+            ;;
+        --replace-links)
+            REPLACE_LINKS=1
+            shift
+            ;;
+        --dry-run)
+            DRY_RUN=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "ERROR: unknown option: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+    esac
+done
+
+case "$DATA_DIR" in
+    /*) ;;
+    ~*) DATA_DIR="${DATA_DIR/#\~/$HOME}" ;;
+    *) DATA_DIR="$PWD/$DATA_DIR" ;;
+esac
+
+ALIAS_PATH="$HOME/.second-brain"
+
+if [ "$DRY_RUN" -eq 1 ]; then
+    echo "Toolkit: $PWD"
+    echo "Private data: $DATA_DIR"
+    echo "Stable data path: $ALIAS_PATH -> $DATA_DIR"
+    if [ "$LINK_AGENTS" -eq 1 ]; then
+        echo "Agent links: enabled"
+    else
+        echo "Agent links: disabled"
+    fi
+    echo "Private Git repository: $([ "$INIT_GIT" -eq 1 ] && echo enabled || echo disabled)"
+    exit 0
+fi
+
+# 1. Python environment
 if [ ! -d .venv ]; then
     python3 -m venv .venv
-    echo "venv created."
+    echo "Created Python environment."
 fi
-.venv/bin/pip install --quiet -r requirements.txt
-
-# 2. Agent rules: source of truth is AGENTS.md (tool-neutral standard,
-#    read natively by Copilot/Cursor/Codex in the repo). Claude Code
-#    gets it globally via the symlink ~/.claude/CLAUDE.md.
-mkdir -p "$HOME/.claude"
-TARGET="$HOME/.claude/CLAUDE.md"
-if [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
-    cp "$TARGET" "$TARGET.backup-$(date +%Y%m%d%H%M%S)"
-    echo "Existing $TARGET backed up."
+if [ -x .venv/bin/python ]; then
+    PYTHON="$PWD/.venv/bin/python"
+elif [ -x .venv/Scripts/python.exe ]; then
+    PYTHON="$PWD/.venv/Scripts/python.exe"
+else
+    echo "ERROR: could not find the virtual-environment Python executable" >&2
+    exit 1
 fi
-ln -sf "$PWD/AGENTS.md" "$TARGET"
-echo "Agent rules linked: $TARGET -> $PWD/AGENTS.md"
+"$PYTHON" -m pip install --quiet --editable .
+chmod +x second-brain
 
-# 3. GitHub Copilot: link user instructions into the VS Code profile.
-#    macOS path shown; on Linux use "$HOME/.config/Code/User", on
-#    Windows (Git Bash) use "$APPDATA/Code/User".
-VSCODE_USER="$HOME/Library/Application Support/Code/User"
-if [ -d "$VSCODE_USER" ]; then
-    mkdir -p "$VSCODE_USER/prompts"
-    ln -sf "$PWD/workflow/copilot-instructions.md" \
-        "$VSCODE_USER/prompts/second-brain.instructions.md"
-    echo "Copilot instructions linked."
+resolved_path() {
+    "$PYTHON" -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).expanduser().resolve())' "$1"
+}
+
+# 2. Refuse conflicting data locations before creating any private files
+if [ -L "$ALIAS_PATH" ]; then
+    CURRENT_TARGET="$(readlink "$ALIAS_PATH")"
+    if [ "$(resolved_path "$ALIAS_PATH")" != "$(resolved_path "$DATA_DIR")" ] \
+        && [ "$REPLACE_LINKS" -ne 1 ]; then
+        echo "ERROR: $ALIAS_PATH already points to $CURRENT_TARGET" >&2
+        echo "Re-run with --replace-links only after verifying the old location." >&2
+        exit 1
+    fi
+elif [ -e "$ALIAS_PATH" ]; then
+    echo "ERROR: $ALIAS_PATH already exists and is not a symlink." >&2
+    echo "Move or migrate it explicitly; setup will not replace personal data." >&2
+    exit 1
 fi
 
-# 4. Build indexes & weekly logs
-.venv/bin/python connect_neurons.py
+# 3. Private data, kept outside the public repository's history
+INIT_ARGS=(init "$DATA_DIR")
+if [ "$INIT_GIT" -eq 1 ]; then
+    INIT_ARGS+=(--git)
+fi
+"$PYTHON" second_brain.py "${INIT_ARGS[@]}"
 
-echo ""
-echo "Done. Open the folder in VS Code and install the recommended"
-echo "extensions (Foam, Python) when prompted."
+# 4. Stable path used by agent instructions and project repositories
+ln -sfn "$DATA_DIR" "$ALIAS_PATH"
+echo "Stable data path: $ALIAS_PATH -> $DATA_DIR"
+
+link_agent_file() {
+    local source="$1"
+    local target="$2"
+    local label="${3:-File}"
+    mkdir -p "$(dirname "$target")"
+    if [ -L "$target" ]; then
+        local current
+        current="$(readlink "$target")"
+        if [ "$(resolved_path "$target")" != "$(resolved_path "$source")" ] \
+            && [ "$REPLACE_LINKS" -ne 1 ]; then
+            echo "Skipped existing symlink: $target -> $current"
+            return
+        fi
+    elif [ -e "$target" ]; then
+        if [ "$REPLACE_LINKS" -ne 1 ]; then
+            echo "Skipped existing file: $target"
+            return
+        fi
+        local backup="$target.backup-$(date +%Y%m%d%H%M%S)"
+        cp "$target" "$backup"
+        echo "Backed up existing file: $backup"
+    fi
+    ln -sfn "$source" "$target"
+    echo "$label linked: $target"
+}
+
+link_agent_file \
+    "$PWD/second-brain" \
+    "${XDG_BIN_HOME:-$HOME/.local/bin}/second-brain" \
+    "Command"
+
+# 5. Optional tool adapters
+if [ "$LINK_AGENTS" -eq 1 ]; then
+    link_agent_file "$PWD/AGENTS.md" "$HOME/.claude/CLAUDE.md" "Claude instructions"
+
+    VSCODE_USER=""
+    case "$(uname -s)" in
+        Darwin) VSCODE_USER="$HOME/Library/Application Support/Code/User" ;;
+        Linux) VSCODE_USER="${XDG_CONFIG_HOME:-$HOME/.config}/Code/User" ;;
+        MINGW*|MSYS*|CYGWIN*) VSCODE_USER="${APPDATA:-}/Code/User" ;;
+    esac
+    if [ -n "$VSCODE_USER" ] && [ -d "$VSCODE_USER" ]; then
+        link_agent_file \
+            "$PWD/workflow/copilot-instructions.md" \
+            "$VSCODE_USER/prompts/second-brain.instructions.md" \
+            "Copilot instructions"
+    else
+        echo "VS Code user directory not found; Copilot link skipped."
+    fi
+fi
+
+"$PYTHON" second_brain.py doctor "$DATA_DIR"
+if ! "$PYTHON" second_brain.py upgrade "$DATA_DIR" --check; then
+    echo "Toolkit-managed files have updates available."
+    echo "Review and apply them with: second-brain upgrade"
+fi
+
+echo
+echo "Done. Personal data stays in: $DATA_DIR"
+echo "The public toolkit repository ignores that directory."
+if [ "$INIT_GIT" -eq 1 ]; then
+    echo "Only connect the private data repository to a private remote."
+fi

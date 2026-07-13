@@ -6,8 +6,8 @@ type: template
 
 # Project Template
 
-See [`projects/example-project/`](../projects/example-project/project.md)
-for a filled-in example. Copy this into `projects/<name>/project.md`:
+The public toolkit repository contains a filled-in example. Copy this
+template into `projects/<name>/project.md`:
 
     ---
     title: <Project Name>

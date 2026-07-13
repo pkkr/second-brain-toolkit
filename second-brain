@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    case "$SOURCE" in
+        /*) ;;
+        *) SOURCE="$DIR/$SOURCE" ;;
+    esac
+done
+cd "$(dirname "$SOURCE")"
+if [ -x .venv/bin/python ]; then
+    exec .venv/bin/python second_brain.py "$@"
+elif [ -x .venv/Scripts/python.exe ]; then
+    exec .venv/Scripts/python.exe second_brain.py "$@"
+else
+    echo "ERROR: run setup.sh to create the Python environment" >&2
+    exit 1
+fi

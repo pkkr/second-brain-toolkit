@@ -12,6 +12,7 @@ Usage:
     python connect_neurons.py [path-to-bundle]   # default: current directory
 """
 
+import argparse
 import re
 import sys
 from pathlib import Path
@@ -19,7 +20,15 @@ from pathlib import Path
 import yaml
 
 RESERVED = {"index.md", "log.md", "README.md", "CLAUDE.md", "AGENTS.md", "inbox.md"}
-IGNORE_DIRS = {".git", ".foam", ".vscode", ".venv", "node_modules", "attachments"}
+IGNORE_DIRS = {
+    ".git",
+    ".backups",
+    ".foam",
+    ".vscode",
+    ".venv",
+    "node_modules",
+    "attachments",
+}
 WEEK_RE = re.compile(r"^\d{4}-W\d{2}$")
 
 
@@ -40,21 +49,27 @@ def read_frontmatter(path: Path) -> dict:
         return {}
 
 
-def build_index(directory: Path, root: Path) -> bool:
+def build_index(directory: Path, root: Path, check: bool = False) -> tuple[bool, bool]:
     """Builds the index.md for a directory and recurses into subfolders.
 
-    Returns whether the directory has an index.md, so the parent only
-    links to indexes that actually exist.
+    Returns whether the directory has an index and whether generated
+    output is stale, so callers can use the same logic for write and
+    check-only modes.
     """
     entries = []
 
     # Subfolders first
     subdirs = sorted(
         d for d in directory.iterdir()
-        if d.is_dir() and d.name not in IGNORE_DIRS
+        if d.is_dir()
+        and d.name not in IGNORE_DIRS
+        and not (directory == root and d.name == "private")
     )
+    changed = False
     for sub in subdirs:
-        if build_index(sub, root):
+        has_index, sub_changed = build_index(sub, root, check=check)
+        changed = changed or sub_changed
+        if has_index:
             entries.append(f"- [{sub.name}/]({sub.name}/index.md)")
 
     # Content files
@@ -83,9 +98,13 @@ def build_index(directory: Path, root: Path) -> bool:
     # No content left: clean up a stale index.md
     if not entries:
         if index_path.exists():
-            index_path.unlink()
-            print(f"Removed: {index_path.relative_to(root)}")
-        return False
+            changed = True
+            if check:
+                print(f"STALE: remove {index_path.relative_to(root)}")
+            else:
+                index_path.unlink()
+                print(f"Removed: {index_path.relative_to(root)}")
+        return False, changed
 
     rel_name = directory.relative_to(root).as_posix()
     heading = rel_name if rel_name != "." else root.name
@@ -94,10 +113,14 @@ def build_index(directory: Path, root: Path) -> bool:
 
     # Only write if something changed (keeps git history clean)
     if index_path.exists() and index_path.read_text(encoding="utf-8") == content:
-        return True
-    index_path.write_text(content, encoding="utf-8")
-    print(f"Updated: {index_path.relative_to(root)}")
-    return True
+        return True, changed
+    changed = True
+    if check:
+        print(f"STALE: update {index_path.relative_to(root)}")
+    else:
+        index_path.write_text(content, encoding="utf-8")
+        print(f"Updated: {index_path.relative_to(root)}")
+    return True, changed
 
 
 def collect_weeks(root: Path) -> dict:
@@ -116,11 +139,12 @@ def collect_weeks(root: Path) -> dict:
     return weeks
 
 
-def write_weekly_logs(root: Path) -> None:
+def write_weekly_logs(root: Path, check: bool = False) -> bool:
     """Generates one global log per week from the project logs."""
+    changed = False
     weeks = collect_weeks(root)
     log_dir = root / "log"
-    if weeks:
+    if weeks and not check:
         log_dir.mkdir(exist_ok=True)
 
     for week, projects in weeks.items():
@@ -139,8 +163,12 @@ def write_weekly_logs(root: Path) -> None:
         week_path = log_dir / f"{week}.md"
         if week_path.exists() and week_path.read_text(encoding="utf-8") == content:
             continue
-        week_path.write_text(content, encoding="utf-8")
-        print(f"Updated: {week_path.relative_to(root)}")
+        changed = True
+        if check:
+            print(f"STALE: update {week_path.relative_to(root)}")
+        else:
+            week_path.write_text(content, encoding="utf-8")
+            print(f"Updated: {week_path.relative_to(root)}")
 
     # Remove generated weeks that no longer have any entries
     if log_dir.is_dir():
@@ -148,12 +176,48 @@ def write_weekly_logs(root: Path) -> None:
             if f.name == "index.md" or f.stem in weeks:
                 continue
             if read_frontmatter(f).get("generated"):
-                f.unlink()
-                print(f"Removed: {f.relative_to(root)}")
+                changed = True
+                if check:
+                    print(f"STALE: remove {f.relative_to(root)}")
+                else:
+                    f.unlink()
+                    print(f"Removed: {f.relative_to(root)}")
+    return changed
+
+
+def generate(root: Path, check: bool = False) -> bool:
+    """Generates derived files and returns whether changes were needed."""
+    logs_changed = write_weekly_logs(root, check=check)
+    _, indexes_changed = build_index(root, root, check=check)
+    return logs_changed or indexes_changed
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Generate indexes and weekly logs for a Second Brain."
+    )
+    parser.add_argument(
+        "path",
+        nargs="?",
+        default=".",
+        help="Second Brain data directory (default: current directory)",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Report stale generated files without modifying them",
+    )
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
-    bundle_root = (Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()).resolve()
-    write_weekly_logs(bundle_root)
-    build_index(bundle_root, bundle_root)
-    print("Done.")
+    args = parse_args()
+    bundle_root = Path(args.path).expanduser().resolve()
+    if not bundle_root.is_dir():
+        print(f"ERROR: data directory does not exist: {bundle_root}", file=sys.stderr)
+        raise SystemExit(2)
+    changed = generate(bundle_root, check=args.check)
+    if args.check and changed:
+        print("Generated files are stale.", file=sys.stderr)
+        raise SystemExit(1)
+    print("Generated files are current." if args.check else "Done.")

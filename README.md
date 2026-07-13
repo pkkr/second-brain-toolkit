@@ -1,107 +1,128 @@
 # Second Brain Toolkit
 
-A memory system for your coding agents. Every time you open a new
-Claude Code, Copilot, or Cursor session, it has amnesia — it doesn't
-know what your project is for, how you deploy it, what you decided
-last week, or what's still open. This toolkit fixes that: a small
-Markdown knowledge base that agents read *and write*, so context
-survives across sessions, tools, and machines.
+A privacy-first memory system for coding agents. It keeps durable project
+context in plain Markdown so decisions, recurring workflows, and active
+tasks survive across sessions, tools, and machines.
 
-It's built on [Foam](https://foambubble.github.io/foam/) (VS Code +
-plain Markdown, no server, no lock-in) and
-[Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md),
-Google Cloud's spec for storing knowledge as Markdown + YAML
-frontmatter — together they keep the notes consistent enough for a
-script to index them and for an agent to reliably find its way around.
+The toolkit uses [Foam](https://foambubble.github.io/foam/) for editing
+and follows [Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+conventions for Markdown and YAML frontmatter. No server or proprietary
+database is required.
 
-## What it actually does
+## What it does
 
-- **Agents identify your project automatically**, via its git remote
-  URL, and know where to look for context — no copy-pasting a project
-  brief into every new session.
-- **Context loads progressively.** Agents start with a compact project
-  summary and expand into detailed processes, history, or linked notes
-  only when the current task needs them. Large knowledge bases therefore
-  remain useful without filling every prompt.
-- **Agents write back selectively.** Durable decisions, released
-  outcomes, changed workflows, and unresolved risks are captured in the
-  moment without turning the notes into a second git history.
-- **One rule file, every tool.** `AGENTS.md` is the emerging
-  tool-neutral standard (read natively by Copilot, Cursor, Codex, and
-  others). Claude Code gets the same file via a symlink to
-  `~/.claude/CLAUDE.md`. No duplicated, drifting instructions.
-- **A junk-drawer that stays manageable.** Drop a thought or task into
-  `inbox.md`; agents sort items they can confidently associate with the
-  current project and leave unrelated or ambiguous entries untouched.
-- **Generated, not maintained.** `connect_neurons.py` builds an
-  `index.md` per folder and rolls up all projects' weekly logs into a
-  single global log — so you get an overview without keeping one by hand.
+- **Identifies projects automatically** from a git remote or local path.
+- **Loads context progressively:** agents start with a compact project
+  summary and open detailed processes or history only when needed.
+- **Writes back selectively:** durable decisions, released outcomes,
+  changed workflows, and unresolved risks are recorded without copying
+  git history into the notes.
+- **Keeps public code and private memory separate:** personal data lives
+  in an ignored `private/` directory, exposed through the stable
+  `~/.second-brain` path.
+- **Validates the knowledge base:** the CLI detects malformed metadata,
+  broken links, duplicate project identities, misplaced completed tasks,
+  invalid logs, and stale generated files.
+- **Generates navigation:** folder indexes and cross-project weekly logs
+  are derived automatically.
 
 ## Quick start
 
 ```bash
-git clone https://github.com/pkkr/second-brain-toolkit.git ~/second-brain
-cd ~/second-brain
+git clone https://github.com/pkkr/second-brain-toolkit.git ~/second-brain-toolkit
+cd ~/second-brain-toolkit
 ./setup.sh
 ```
 
-`setup.sh` creates a Python venv, links `AGENTS.md` to
-`~/.claude/CLAUDE.md` (Claude Code) and into your VS Code profile
-(Copilot), and builds the indexes. It's idempotent — safe to re-run
-any time, including on a second machine.
+The setup script:
 
-Then open the folder in VS Code and accept the recommended-extensions
-prompt (Foam, Python). Take a look at
-[`projects/example-project/`](projects/example-project/project.md) and
-[`knowledge/example-note.md`](knowledge/example-note.md) to see the
-format in practice, then delete them once you've got the idea.
+1. Creates a local Python environment.
+2. Initializes personal data in `private/`, which the public repository
+   ignores.
+3. Links that directory to `~/.second-brain` so project instructions do
+   not depend on the toolkit's installation path.
+4. Installs a `second-brain` command under `~/.local/bin` when that path
+   is available.
+5. Adds optional agent-tool links without overwriting unrelated files.
 
-## Structure
+Preview all locations without changing anything:
+
+```bash
+./setup.sh --dry-run
+```
+
+To give the private data its own local Git history:
+
+```bash
+./setup.sh --init-git
+```
+
+Only connect that nested repository to a **private** remote. The outer
+toolkit repository will continue to ignore it.
+
+## Public toolkit versus private data
+
+| Location | Purpose | Public repository |
+|---|---|---|
+| Toolkit root | CLI, rules, templates, examples, tests | Tracked |
+| `private/` | Personal projects, knowledge, inbox, and logs | Ignored |
+| `~/.second-brain` | Stable link to the selected private directory | Outside the repository |
+
+Inside the private data directory:
 
 | Location | Contents |
 |---|---|
-| `AGENTS.md` | The rules every agent follows — this is the actual engine |
-| `inbox.md` | Quick capture: drop thoughts & tasks, agents sort them in |
-| `workflow/` | Your general working style, plus templates |
-| `projects/<name>/` | `project.md` (core facts + active tasks), a `processes.md` router, detailed `processes/`, `log.md`, and optional archives |
-| `knowledge/` | Topic notes that don't belong to one project |
-| `log/` | **Generated:** one weekly log per ISO week, across all projects |
+| `AGENTS.md` | Shared rules for agents |
+| `inbox.md` | Quick capture for unsorted thoughts and tasks |
+| `workflow/` | General working style and reusable templates |
+| `projects/<name>/` | Project summary, active tasks, process router, detailed processes, and log |
+| `knowledge/` | Durable notes that apply across projects |
+| `log/` | Generated weekly roll-up across projects |
+| `second-brain.yml` | Data schema version |
 
-## The OKF conventions
+The tracked [`projects/example-project/`](projects/example-project/project.md)
+and [`knowledge/example-note.md`](knowledge/example-note.md) demonstrate
+the format; they are not copied into private data.
 
-The [OKF spec](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
-itself only requires a `type` field on each note; this toolkit is
-stricter and also requires `title` and `description`:
-
-- Every note carries YAML frontmatter with `title`, `description`, and
-  `type`.
-- Links are standard Markdown links (`[Title](path.md)`), not
-  wikilinks — `connect_neurons.py` generates plain index pages, and
-  keeping one link syntax means those pages render the same everywhere
-  a Markdown renderer might show them (GitHub, a static site, etc.).
-  Foam is configured (`foam.completion.linkFormat: "link"`) so typing
-  `[[` still autocompletes, but inserts a Markdown link.
-- One `index.md` per folder, generated — never hand-edited. Same for
-  the `log/` roll-up.
-
-Run the generator any time: it happens automatically when you open the
-folder in VS Code, or manually with `⇧⌘B` / `Ctrl+Shift+B`, or:
+## Command line interface
 
 ```bash
-.venv/bin/python connect_neurons.py
+second-brain init [PATH] [--git]
+second-brain generate [PATH]
+second-brain generate [PATH] --check
+second-brain check [PATH] [--strict]
+second-brain doctor [PATH]
+second-brain new-project NAME --repo REMOTE
+second-brain new-process PROJECT NAME --trigger DESCRIPTION
+second-brain archive-tasks PROJECT
+second-brain upgrade [PATH] [--check]
 ```
 
-## Using it across your other repos
+The default path is `~/.second-brain`, or the value of
+`SECOND_BRAIN_HOME` when set.
 
-For tools that don't read a global config (or when you want context
-to travel with the repo itself, e.g. for a teammate), add a small
-`AGENTS.md` to each project pointing back at its Second Brain notes —
-template in
-[`workflow/project-agents-template.md`](workflow/project-agents-template.md).
-Your main `AGENTS.md` already tells agents to set this up on their own
-the first time they work in a new project.
+- `init` creates missing private-data files and preserves existing ones.
+- `generate` updates folder indexes and weekly log roll-ups.
+- `generate --check` reports generated drift without writing files.
+- `check` validates structure, metadata, links, project identities,
+  task placement, logs, generated output, and common secret-like values.
+- `doctor` checks the local installation before running the validator.
+- `new-project` creates a project summary, process router, log, and
+  process directory with valid metadata.
+- `new-process` creates a detailed workflow and adds it to the router.
+- `archive-tasks` moves checked tasks out of `Open items` into a durable
+  archive.
+- `upgrade` refreshes toolkit-managed rules and templates, backing up
+  changed copies while preserving the customized working style.
 
-## How agents use context
+The original generator remains available for scripting:
+
+```bash
+.venv/bin/python connect_neurons.py ~/.second-brain
+.venv/bin/python connect_neurons.py --check ~/.second-brain
+```
+
+## Context model
 
 The default reading path is intentionally small:
 
@@ -111,33 +132,83 @@ The default reading path is intentionally small:
 4. Only the detailed process, recent log entries, or linked notes needed
    for the current task
 
-This is progressive disclosure for project memory. It keeps routine work
-fast while preserving deep context for deployments, migrations, old
-decisions, and incident follow-up. Completed-task archives, full logs,
-other projects, and generated indexes are not loaded "just in case."
+Completed-task archives, full logs, unrelated projects, and generated
+indexes are not loaded "just in case." This keeps routine work fast
+without discarding deeper context.
+
+## OKF conventions
+
+The toolkit requires every indexed note to contain `title`,
+`description`, and `type` in YAML frontmatter. It also uses:
+
+- Standard Markdown links instead of wikilinks
+- Generated `index.md` files per folder
+- Generated cross-project weekly logs
+- Active unchecked tasks only under `Open items`
+- One detailed file per recurring process, reached through a compact
+  `processes.md` router
+
+Run `second-brain check` after structural changes.
+
+## Agent-tool adapters
+
+Agent products discover instructions differently. The toolkit keeps the
+memory format independent and treats integrations as adapters:
+
+| Tool | Toolkit integration |
+|---|---|
+| Claude Code | Optional link from `AGENTS.md` to `~/.claude/CLAUDE.md` |
+| GitHub Copilot in VS Code | Optional user-instructions link when the VS Code profile is detected |
+| Codex, Cursor, and other repository-aware tools | Add the small repository-level `AGENTS.md` from the provided template |
+
+Use `./setup.sh --no-agent-links` when tool configuration should remain
+untouched. Existing files and unrelated symlinks are skipped unless
+`--replace-links` is explicitly supplied.
+
+`setup.sh` targets macOS and Linux. On Windows, WSL is the recommended
+path; the Python CLI itself also works from PowerShell after creating a
+virtual environment and installing the project with `pip install -e .`.
 
 ## Multiple machines
 
-`setup.sh` is the whole story: clone (or sync) the folder, run the
-script, open in VS Code. It backs up any pre-existing
-`~/.claude/CLAUDE.md` before linking, so it won't clobber unrelated
-setups.
+There are two independent histories:
 
-## A word on what to put in here
+1. Pull toolkit updates from the public toolkit repository.
+2. Synchronize `private/` through a separate private repository or an
+   approved private storage system.
 
-This is for durable context — the things a `git log` won't tell you:
-why a decision was made, how deploys actually work, what's still open,
-and which risks a future session must remember. It is **not** a
-replacement for git history, a test report, or a stream of routine
-status updates.
+After pulling toolkit updates, run `second-brain upgrade --check` and
+then `second-brain upgrade` to apply reviewed rule and template changes.
+Customized `workflow/working-style.md` is never replaced.
+
+Run `./setup.sh --data-dir PATH` on each machine to recreate the stable
+`~/.second-brain` link. Never add `private/` to the public toolkit
+repository.
+
+Existing installations can follow [MIGRATING.md](MIGRATING.md).
+
+## Privacy and scope
+
+Store only durable context that source control and issue trackers do not
+explain well: rationale, operating knowledge, current priorities, and
+unresolved risks.
 
 Never store production or personal secrets, tokens, private keys, or
 reusable passwords. Clearly labeled throwaway credentials for a
-local-only environment can be documented only when they contain no real
-data and are never reused. On managed devices or company projects,
-follow the relevant data-handling and infrastructure policies.
+local-only environment are acceptable only when they contain no real
+data and are never reused. Follow organizational data-handling policies
+on managed devices and company projects.
+
+## Development
+
+```bash
+.venv/bin/python -m unittest discover -s tests
+.venv/bin/python second_brain.py check .
+.venv/bin/python connect_neurons.py --check .
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) before proposing changes.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Fork it, rename the reserved files if
-you'd rather call it something else, make it yours.
+MIT — see [LICENSE](LICENSE).

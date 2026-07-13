@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "second-brain-toolkit"
+version = "0.2.0"
+description = "Privacy-first project memory for coding agents"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+dependencies = ["PyYAML>=6.0.2,<7"]
+
+[project.urls]
+Homepage = "https://github.com/pkkr/second-brain-toolkit"
+Repository = "https://github.com/pkkr/second-brain-toolkit"
+
+[project.scripts]
+second-brain = "second_brain:main"
+
+[tool.setuptools]
+py-modules = ["connect_neurons", "second_brain"]
+
+[tool.setuptools.data-files]
+"share/second-brain-toolkit" = ["AGENTS.md", "inbox.md"]
+"share/second-brain-toolkit/workflow" = [
+    "workflow/copilot-instructions.md",
+    "workflow/project-agents-template.md",
+    "workflow/project-template.md",
+    "workflow/working-style.md",
+]
+"share/second-brain-toolkit/.foam/templates" = [".foam/templates/new-note.md"]

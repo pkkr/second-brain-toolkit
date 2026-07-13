@@ -1,6 +1,12 @@
 # Python
 .venv/
 __pycache__/
+*.egg-info/
+/build/
+/dist/
+
+# Personal Second Brain data (may contain its own private Git repository)
+/private/
 
 # OS
 .DS_Store

@@ -20,6 +20,7 @@ Copy this into `<project-repo>/AGENTS.md` and replace `<name>`:
     - Progress log: `projects/<name>/log.md`
 
     Read `~/.second-brain/AGENTS.md` at the start and follow its rules.
-    Load only the project sections, linked notes, process details, and
-    recent log entries relevant to the current task. If the Second Brain
-    is unavailable on this machine, continue without it.
+    Load only the project sections, linked notes, and process details
+    relevant to the current task. For history, use only the newest ISO
+    week, at most the latest five log entries, or targeted search results.
+    If the Second Brain is unavailable on this machine, continue without it.

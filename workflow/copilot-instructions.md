@@ -17,8 +17,8 @@ that file is unavailable, use this compact fallback:
   and open items. Follow linked context only when relevant.
 - Treat `processes.md` as a router and load only the detailed recurring
   process needed for the current task.
-- Do not read the complete project log by default; use recent entries or
-  a targeted search.
+- Do not read the complete project log by default; use the newest ISO
+  week, at most the latest five entries, or a targeted search.
 - For noteworthy sessions, write at most one to three durable log
   bullets. Keep only active tasks in `Open items`; archive completed work.
 - Never store real secrets, tokens, private keys, or reusable passwords

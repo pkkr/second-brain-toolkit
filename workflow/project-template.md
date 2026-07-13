@@ -37,6 +37,7 @@ template into `projects/<name>/project.md`:
 
     ## Archive
     - [Completed items](completed-items.md)
+    - [Progress log](log.md)
 
 Keep only active unchecked tasks in `Open items`. Move durable completed
 work to `log.md`; use an optional `completed-items.md` when older task

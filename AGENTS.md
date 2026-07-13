@@ -15,7 +15,9 @@ When instructions conflict, follow this order:
 5. This file
 
 At the same level, prefer the more specific and more recently verified
-instruction. Never weaken security, privacy, or legal constraints.
+instruction. Do not try to satisfy a conflict by executing both paths;
+surface the conflict and its practical impact. Never weaken security,
+privacy, or legal constraints.
 
 ## Identify the project
 
@@ -56,8 +58,12 @@ an ambiguity, or a failed assumption requires it.
 - Before deploying, migrating, releasing, rotating credentials, or
   performing another recurring operation, load and follow the matching
   process.
+- A code or UI task, for example, should not load unrelated mobile-build,
+  backup, or deployment processes.
 - When a workflow is established or materially changes, update its
-  detailed process and the router's verification date immediately.
+  detailed process and the router's verification date immediately. Use
+  numbered steps and exact commands; this routine maintenance does not
+  require a separate permission request.
 - Guidance that applies to every project belongs in
   `workflow/working-style.md`, not in a project process.
 
@@ -88,7 +94,8 @@ with these additional conventions:
 
 - Every indexed note has YAML frontmatter containing `title`,
   `description`, and `type`.
-- Use standard Markdown links, not wikilinks.
+- Use standard Markdown links, not wikilinks. Convert legacy wikilinks
+  when encountered.
 - `connect_neurons.py` generates each folder's `index.md` and the
   global `log/` roll-up. Never edit generated files by hand.
 

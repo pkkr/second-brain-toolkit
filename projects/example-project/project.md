@@ -45,3 +45,4 @@ See the [deployment process](processes/deploy.md) for the verified steps.
 ## Archive
 
 - [Completed items](completed-items.md)
+- [Progress log](log.md)

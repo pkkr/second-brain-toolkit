@@ -17,6 +17,8 @@ corresponding project notes.
   Second Brain guidance, this file, and finally general agent defaults.
 - At the same level, prefer the more specific and more recently verified
   instruction.
+- Do not attempt to resolve conflicting instructions by performing both
+  alternatives. State the conflict and its practical consequence.
 - Security, privacy, legal, and compliance constraints always remain in
   force.
 
@@ -27,6 +29,8 @@ corresponding project notes.
   surface assumptions that materially affect the outcome.
 - Preserve unrelated local changes and avoid destructive version-control
   operations unless explicitly requested.
+- Use fictional names and synthetic data in public repositories, demos,
+  screenshots, and mockups unless real data is explicitly authorized.
 - <add communication or language preferences here>
 - <add confidentiality or compliance requirements here>
 
@@ -36,6 +40,7 @@ corresponding project notes.
   open items, and the process router.
 - Load detailed process notes, historical log entries, archives, and
   linked knowledge only when the task needs them.
+- Treat a link as navigation, not as an instruction to load its target.
 - Prefer targeted searches and recent log entries over reading an entire
   history.
 - Keep notes concise and durable. Git already records implementation

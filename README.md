@@ -138,7 +138,8 @@ The default reading path is intentionally small:
 
 Completed-task archives, full logs, unrelated projects, and generated
 indexes are not loaded "just in case." This keeps routine work fast
-without discarding deeper context.
+without discarding deeper context. A link provides navigation; it is not
+an instruction to load the linked note preemptively.
 
 ## OKF conventions
 

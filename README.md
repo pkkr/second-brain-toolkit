@@ -19,16 +19,20 @@ script to index them and for an agent to reliably find its way around.
 - **Agents identify your project automatically**, via its git remote
   URL, and know where to look for context — no copy-pasting a project
   brief into every new session.
-- **Agents write back.** A short session log, updated task checkboxes,
-  a newly-learned deploy command — captured in the moment, not
-  reconstructed from memory three weeks later.
+- **Context loads progressively.** Agents start with a compact project
+  summary and expand into detailed processes, history, or linked notes
+  only when the current task needs them. Large knowledge bases therefore
+  remain useful without filling every prompt.
+- **Agents write back selectively.** Durable decisions, released
+  outcomes, changed workflows, and unresolved risks are captured in the
+  moment without turning the notes into a second git history.
 - **One rule file, every tool.** `AGENTS.md` is the emerging
   tool-neutral standard (read natively by Copilot, Cursor, Codex, and
   others). Claude Code gets the same file via a symlink to
   `~/.claude/CLAUDE.md`. No duplicated, drifting instructions.
-- **A junk-drawer that empties itself.** Drop a thought or task into
-  `inbox.md`; agents sort it into the right project or note the next
-  time they're in there anyway.
+- **A junk-drawer that stays manageable.** Drop a thought or task into
+  `inbox.md`; agents sort items they can confidently associate with the
+  current project and leave unrelated or ambiguous entries untouched.
 - **Generated, not maintained.** `connect_neurons.py` builds an
   `index.md` per folder and rolls up all projects' weekly logs into a
   single global log — so you get an overview without keeping one by hand.
@@ -59,7 +63,7 @@ format in practice, then delete them once you've got the idea.
 | `AGENTS.md` | The rules every agent follows — this is the actual engine |
 | `inbox.md` | Quick capture: drop thoughts & tasks, agents sort them in |
 | `workflow/` | Your general working style, plus templates |
-| `projects/<name>/` | `project.md` (core facts + tasks), `processes.md`, `log.md` |
+| `projects/<name>/` | `project.md` (core facts + active tasks), a `processes.md` router, detailed `processes/`, `log.md`, and optional archives |
 | `knowledge/` | Topic notes that don't belong to one project |
 | `log/` | **Generated:** one weekly log per ISO week, across all projects |
 
@@ -97,6 +101,21 @@ template in
 Your main `AGENTS.md` already tells agents to set this up on their own
 the first time they work in a new project.
 
+## How agents use context
+
+The default reading path is intentionally small:
+
+1. General working style
+2. Project frontmatter, goal, architecture, decisions, and active tasks
+3. The process router
+4. Only the detailed process, recent log entries, or linked notes needed
+   for the current task
+
+This is progressive disclosure for project memory. It keeps routine work
+fast while preserving deep context for deployments, migrations, old
+decisions, and incident follow-up. Completed-task archives, full logs,
+other projects, and generated indexes are not loaded "just in case."
+
 ## Multiple machines
 
 `setup.sh` is the whole story: clone (or sync) the folder, run the
@@ -107,12 +126,16 @@ setups.
 ## A word on what to put in here
 
 This is for durable context — the things a `git log` won't tell you:
-why a decision was made, how deploys actually work, what's still
-open. It is **not** a replacement for git history, and it should
-**never** contain secrets, tokens, or credentials. If you're setting
-this up on a work machine, check with your employer before pointing it
-at anything beyond your own scratch notes, and keep it on
-infrastructure they're comfortable with.
+why a decision was made, how deploys actually work, what's still open,
+and which risks a future session must remember. It is **not** a
+replacement for git history, a test report, or a stream of routine
+status updates.
+
+Never store production or personal secrets, tokens, private keys, or
+reusable passwords. Clearly labeled throwaway credentials for a
+local-only environment can be documented only when they contain no real
+data and are never reused. On managed devices or company projects,
+follow the relevant data-handling and infrastructure policies.
 
 ## License
 

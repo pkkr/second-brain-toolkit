@@ -1,6 +1,6 @@
 ---
 title: Project Template
-description: Template for a project's core note (project.md)
+description: Template for a project's core note and supporting memory
 type: template
 ---
 
@@ -11,7 +11,7 @@ for a filled-in example. Copy this into `projects/<name>/project.md`:
 
     ---
     title: <Project Name>
-    description: <One sentence – what is this project?>
+    description: <One sentence describing the project>
     type: project
     repo: <git remote get-url origin, e.g. git@host:org/name.git>
     path: <local path, e.g. ~/code/name>
@@ -21,34 +21,64 @@ for a filled-in example. Copy this into `projects/<name>/project.md`:
     # <Project Name>
 
     ## Goal
-    <Why does this project exist? For whom?>
+    <Why does this project exist, and for whom?>
 
-    ## Stack & architecture
-    <Languages, frameworks, database, notable quirks>
+    ## Stack and architecture
+    <Languages, frameworks, data stores, and notable constraints>
 
     ## Deployment
-    <Where does it run, how do you deploy?>
+    <Where it runs; link to the detailed deployment process>
 
     ## Decisions
-    <Key architecture/product decisions with a short rationale>
+    <Key product or architecture decisions with concise rationale>
 
     ## Open items
-    - [ ] <Task – check off when done>
+    - [ ] <Active task>
 
-Each project also keeps a `log.md` (not indexed):
+    ## Archive
+    - [Completed items](completed-items.md)
+
+Keep only active unchecked tasks in `Open items`. Move durable completed
+work to `log.md`; use an optional `completed-items.md` when older task
+history remains useful.
+
+Each project also has a `log.md`. Add no more than one to three durable
+entries for a noteworthy session:
 
     ## 2026-W27
-    - 2026-07-02: <short bullet of what happened>
 
-And a `processes.md` for recurring workflows (agents maintain this automatically):
+    - 2026-07-02: <decision, released outcome, changed workflow, or unresolved risk>
+
+Use `processes.md` as a short router:
 
     ---
-    title: <Project Name> – Processes
-    description: Recurring workflows (deploy, tests, migrations …)
+    title: <Project Name> – Process Router
+    description: Entry points for recurring project workflows
     type: guide
     ---
 
-    # Processes
+    # Process Router
 
-    ## Deploy
+    | Trigger | Process | Last verified |
+    |---|---|---|
+    | Deploy the service | [Deploy](processes/deploy.md) | YYYY-MM-DD |
+
+Store each detailed recurring workflow under `processes/`, for example
+`processes/deploy.md`:
+
+    ---
+    title: <Project Name> – Deploy
+    description: How to deploy the service safely
+    type: guide
+    ---
+
+    # Deploy
+
+    ## Preconditions
+    - <Required access, branch state, or checks>
+
+    ## Steps
     1. <Step with the exact command>
+
+    ## Verification
+    1. <How to confirm success>

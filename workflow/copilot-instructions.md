@@ -1,22 +1,25 @@
 ---
 title: Copilot Bridge
-description: Copilot user instructions – bridge to AGENTS.md
+description: Copilot user instructions that bridge to AGENTS.md
 type: guide
 applyTo: '**'
 ---
 
 # Second Brain (applies to every project)
 
-At the start of your work, read `~/second-brain/AGENTS.md` (e.g. via
-terminal: `cat ~/second-brain/AGENTS.md`) and follow the rules there
-in full. Short version if that file isn't readable:
+At the start of work, read `~/second-brain/AGENTS.md` and follow it. If
+that file is unavailable, use this compact fallback:
 
-- My Second Brain lives in `~/second-brain/`.
-- Identify the current project via `git remote get-url origin` and
-  find/create its note `projects/<name>/project.md` (frontmatter field
-  `repo:` = remote URL).
-- Read the project's `project.md` and `processes.md` before working.
-- At the end of noteworthy sessions: 2–4 bullets in the project's
-  `log.md` (`## <ISO week>`, bullets `- YYYY-MM-DD: …`), check off
-  tasks in `project.md`.
-- Never write secrets into the Second Brain.
+- Identify the current project through `git remote get-url origin`, then
+  find or create its `projects/<name>/project.md` using the `repo:` or
+  `path:` frontmatter field.
+- Read the general working style and the project's summary, decisions,
+  and open items. Follow linked context only when relevant.
+- Treat `processes.md` as a router and load only the detailed recurring
+  process needed for the current task.
+- Do not read the complete project log by default; use recent entries or
+  a targeted search.
+- For noteworthy sessions, write at most one to three durable log
+  bullets. Keep only active tasks in `Open items`; archive completed work.
+- Never store real secrets, tokens, private keys, or reusable passwords
+  in the Second Brain.

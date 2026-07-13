@@ -1,29 +1,60 @@
 ---
 title: General Working Style
-description: How I work and how agents should collaborate with me
+description: Default collaboration rules shared across projects
 type: guide
 ---
 
 # General Working Style
 
-This is the one file you should actually rewrite for yourself — it's
-where your personal preferences live. A few starting points:
+Customize this file with preferences that genuinely apply across all
+projects. Project-specific commands and exceptions belong in the
+corresponding project notes.
+
+## Instruction priority
+
+- Follow the user's current explicit request first.
+- Then follow the nearest repository instructions, project-specific
+  Second Brain guidance, this file, and finally general agent defaults.
+- At the same level, prefer the more specific and more recently verified
+  instruction.
+- Security, privacy, legal, and compliance constraints always remain in
+  force.
 
 ## Approach
 
 - Test locally and commit, but **do not push** without an explicit request.
-- <add your communication/language preferences here>
-- <add any confidentiality/compliance rules that apply to your work>
+- Make reasonable, reversible assumptions when they keep work moving;
+  surface assumptions that materially affect the outcome.
+- Preserve unrelated local changes and avoid destructive version-control
+  operations unless explicitly requested.
+- <add communication or language preferences here>
+- <add confidentiality or compliance requirements here>
+
+## Context discipline
+
+- Start with the smallest useful context: the active project summary,
+  open items, and the process router.
+- Load detailed process notes, historical log entries, archives, and
+  linked knowledge only when the task needs them.
+- Prefer targeted searches and recent log entries over reading an entire
+  history.
+- Keep notes concise and durable. Git already records implementation
+  detail; the Second Brain should explain intent, decisions, workflows,
+  and unresolved risks.
 
 ## Second Brain
 
-- One [project template](project-template.md)-based note per project
-  under `projects/<name>/`.
-- Identify projects via the git remote URL in the `repo:` frontmatter field.
-- Indexes are generated (`connect_neurons.py`), never edited by hand.
+- Keep one `project-template.md`-based note per project under
+  `projects/<name>/`.
+- Identify projects by the `repo:` frontmatter field, with `path:` as a
+  fallback.
+- Keep `processes.md` as a router and detailed recurring workflows under
+  `processes/`.
+- Generate indexes with `connect_neurons.py`; never edit them manually.
 
 ## Python
 
-- venvs are always named `.venv` and live at the project root.
-- CLI tools via pipx, libraries into the project venv — never install
-  globally with `--break-system-packages`.
+- Name project virtual environments `.venv` and keep them at the project
+  root.
+- Install CLI tools with pipx and libraries in the project virtual
+  environment; do not bypass the system package manager globally.

@@ -1,18 +1,14 @@
 ---
-title: Example Project – Processes
-description: Recurring workflows (deploy, local development)
+title: Example Project – Process Router
+description: Entry points for recurring example-project workflows
 type: guide
 ---
 
-# Processes
+# Process Router
 
-## Deploy
+Load only the process whose trigger matches the current task.
 
-1. Make sure `main` is green (CI passing)
-2. `git checkout deploy && git merge main`
-3. `fly deploy`
-
-## Local development
-
-1. Postgres runs on port 5433 locally — `psql -p 5433`
-2. `npm run dev` starts backend + frontend together
+| Trigger | Process | Last verified |
+|---|---|---|
+| Deploy the application | [Deploy](processes/deploy.md) | 2026-06-20 |
+| Start or troubleshoot local development | [Local development](processes/local-development.md) | 2026-06-22 |

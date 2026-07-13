@@ -19,7 +19,7 @@ A short web app that lets small teams track shared equipment
 bookings. Built for a local makerspace that outgrew a shared
 spreadsheet.
 
-## Stack & architecture
+## Stack and architecture
 
 - Backend: Node.js + PostgreSQL
 - Frontend: React
@@ -29,7 +29,7 @@ spreadsheet.
 ## Deployment
 
 Hosted on Fly.io, one app per environment (staging + production).
-Deploy with `fly deploy` from the `deploy` branch.
+See the [deployment process](processes/deploy.md) for the verified steps.
 
 ## Decisions
 
@@ -41,4 +41,7 @@ Deploy with `fly deploy` from the `deploy` branch.
 
 - [ ] Email reminders before a booking starts
 - [ ] Recurring bookings
-- [x] Basic booking calendar (2026-06-20)
+
+## Archive
+
+- [Completed items](completed-items.md)

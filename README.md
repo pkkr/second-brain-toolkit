@@ -100,6 +100,7 @@ second-brain new-project NAME --repo REMOTE
 second-brain new-process PROJECT NAME --trigger DESCRIPTION
 second-brain archive-tasks PROJECT
 second-brain upgrade [PATH] [--check]
+second-brain migrate-legacy [PATH] [--apply]
 ```
 
 The default path is `~/.second-brain`, or the value of
@@ -118,6 +119,12 @@ The default path is `~/.second-brain`, or the value of
   archive.
 - `upgrade` refreshes toolkit-managed rules and templates, backing up
   changed copies while preserving the customized working style.
+- `migrate-legacy` previews or applies the original German-to-standard
+  layout migration. It preserves domain prose and refuses dirty Git
+  worktrees by default.
+
+When `setup.sh` detects that legacy layout, it stops before creating any
+data and points to the migration preview command.
 
 The original generator remains available for scripting:
 

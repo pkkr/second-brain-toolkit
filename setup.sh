@@ -95,6 +95,14 @@ fi
 "$PYTHON" -m pip install --quiet --editable .
 chmod +x second-brain
 
+if [ -d "$DATA_DIR/projekte" ] || [ -f "$DATA_DIR/workflow/vorgehen.md" ]; then
+    echo "ERROR: legacy German data layout detected at $DATA_DIR" >&2
+    echo "Preview the migration before running setup:" >&2
+    echo "  $PWD/second-brain migrate-legacy \"$DATA_DIR\" --remove-legacy-tools" >&2
+    echo "After committing the data repo, apply it with --apply and re-run setup." >&2
+    exit 1
+fi
+
 resolved_path() {
     "$PYTHON" -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).expanduser().resolve())' "$1"
 }

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -16,7 +17,7 @@ from typing import Iterable
 
 import yaml
 
-from connect_neurons import IGNORE_DIRS, generate
+from connect_neurons import IGNORE_DIRS, generate, read_frontmatter
 
 
 SCHEMA_VERSION = 1
@@ -51,6 +52,37 @@ MANAGED_FILES = (
     "workflow/project-agents-template.md",
     "workflow/project-template.md",
 )
+LEGACY_TOOL_FILES = ("connect_neurons.py", "requirements.txt", "setup.sh")
+LEGACY_TEXT_REPLACEMENTS = (
+    ("projekt-agents-vorlage.md", "project-agents-template.md"),
+    ("projekt-vorlage.md", "project-template.md"),
+    ("abgeschlossene-themen.md", "completed-items.md"),
+    ("projekte/", "projects/"),
+    ("projekt.md", "project.md"),
+    ("prozesse.md", "processes.md"),
+    ("prozesse/", "processes/"),
+    ("vorgehen.md", "working-style.md"),
+)
+LEGACY_LINE_REPLACEMENTS = {
+    "## Ziel": "## Goal",
+    "## Stack & Architektur": "## Stack and architecture",
+    "## Entscheidungen": "## Decisions",
+    "## Offene Themen": "## Open items",
+    "## Archiv": "## Archive",
+    "# Prozesse": "# Process Router",
+    "| Auslöser | Prozess | Zuletzt geprüft |": "| Trigger | Process | Last verified |",
+    "# Abgeschlossene Themen": "# Completed Items",
+}
+PRIVATE_README = """# Private Second Brain
+
+This private repository contains durable project memory used by Second Brain Toolkit.
+The public toolkit provides the CLI, validation, templates, and upgrades; this repository
+contains only personal data and editor configuration.
+
+Access the data through `~/.second-brain` and keep every Git remote private.
+Run `second-brain generate` after structural changes and `second-brain check --strict`
+before committing them.
+"""
 
 
 @dataclass(frozen=True)
@@ -669,6 +701,266 @@ def command_upgrade(args: argparse.Namespace) -> int:
     return 0
 
 
+def legacy_layout_present(root: Path) -> bool:
+    return any(
+        path.exists()
+        for path in (
+            root / "projekte",
+            root / "wissen",
+            root / "workflow/vorgehen.md",
+            root / "workflow/projekt-vorlage.md",
+            root / "workflow/projekt-agents-vorlage.md",
+        )
+    )
+
+
+def legacy_migration_moves(root: Path) -> list[tuple[Path, Path]]:
+    moves: list[tuple[Path, Path]] = []
+    top_level = (("projekte", "projects"), ("wissen", "knowledge"))
+    for old, new in top_level:
+        if (root / old).exists():
+            moves.append((root / old, root / new))
+
+    legacy_projects = root / "projekte"
+    if legacy_projects.is_dir():
+        for project in sorted(path for path in legacy_projects.iterdir() if path.is_dir()):
+            target_project = root / "projects" / project.name
+            for old, new in (
+                ("projekt.md", "project.md"),
+                ("prozesse.md", "processes.md"),
+                ("prozesse", "processes"),
+                ("abgeschlossene-themen.md", "completed-items.md"),
+            ):
+                if (project / old).exists():
+                    moves.append((project / old, target_project / new))
+
+    for old, new in (
+        ("vorgehen.md", "working-style.md"),
+        ("projekt-vorlage.md", "project-template.md"),
+        ("projekt-agents-vorlage.md", "project-agents-template.md"),
+    ):
+        source = root / "workflow" / old
+        if source.exists():
+            moves.append((source, root / "workflow" / new))
+    return moves
+
+
+def migration_collisions(root: Path) -> list[str]:
+    collisions: list[str] = []
+    moves = legacy_migration_moves(root)
+    top_destinations = {root / "projects", root / "knowledge"}
+    for source, destination in moves:
+        if destination in top_destinations:
+            if destination.exists() and source.resolve() != destination.resolve():
+                collisions.append(
+                    f"both {source.relative_to(root)} and "
+                    f"{destination.relative_to(root)} exist"
+                )
+            continue
+        if destination.exists():
+            collisions.append(f"destination already exists: {destination.relative_to(root)}")
+    return collisions
+
+
+def git_worktree_dirty(root: Path) -> bool:
+    if not (root / ".git").exists():
+        return False
+    result = subprocess.run(
+        ["git", "-C", str(root), "status", "--porcelain"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return bool(result.stdout.strip())
+
+
+def apply_legacy_moves(root: Path) -> None:
+    for old, new in (("projekte", "projects"), ("wissen", "knowledge")):
+        source = root / old
+        destination = root / new
+        if source.exists():
+            source.rename(destination)
+
+    projects = root / "projects"
+    if projects.is_dir():
+        for project in sorted(path for path in projects.iterdir() if path.is_dir()):
+            for old, new in (
+                ("projekt.md", "project.md"),
+                ("prozesse.md", "processes.md"),
+                ("prozesse", "processes"),
+                ("abgeschlossene-themen.md", "completed-items.md"),
+            ):
+                source = project / old
+                if source.exists():
+                    source.rename(project / new)
+
+    workflow = root / "workflow"
+    for old, new in (
+        ("vorgehen.md", "working-style.md"),
+        ("projekt-vorlage.md", "project-template.md"),
+        ("projekt-agents-vorlage.md", "project-agents-template.md"),
+    ):
+        source = workflow / old
+        if source.exists():
+            source.rename(workflow / new)
+
+
+def rewrite_legacy_content(root: Path) -> int:
+    changed = 0
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in {".md", ".json"}:
+            continue
+        relative = path.relative_to(root)
+        if any(part in {".git", ".venv", ".backups"} for part in relative.parts):
+            continue
+        original = path.read_text(encoding="utf-8")
+        text = original
+        for old, new in LEGACY_TEXT_REPLACEMENTS:
+            text = text.replace(old, new)
+        text = re.sub(r"(?m)^pfad:", "path:", text)
+        text = re.sub(r"(?m)^status: aktiv[ \t]*$", "status: active", text)
+        for old, new in LEGACY_LINE_REPLACEMENTS.items():
+            text = re.sub(rf"(?m)^{re.escape(old)}$", new, text)
+        if text != original:
+            path.write_text(text, encoding="utf-8")
+            changed += 1
+    return changed
+
+
+def remove_generated_files(root: Path) -> int:
+    removed = 0
+    for index in sorted(root.rglob("index.md")):
+        if any(part in {".git", ".venv", ".backups"} for part in index.relative_to(root).parts):
+            continue
+        index.unlink()
+        removed += 1
+    log_dir = root / "log"
+    if log_dir.is_dir():
+        for path in sorted(log_dir.glob("*.md")):
+            if read_frontmatter(path).get("generated"):
+                path.unlink()
+                removed += 1
+    return removed
+
+
+def update_editor_tasks(root: Path) -> None:
+    tasks_path = root / ".vscode/tasks.json"
+    if not tasks_path.exists():
+        return
+    try:
+        data = json.loads(tasks_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        print(f"WARNING: could not update invalid JSON: {tasks_path.relative_to(root)}")
+        return
+    changed = False
+    for task in data.get("tasks", []):
+        command = str(task.get("command", ""))
+        if "connect_neurons.py" in command:
+            task["label"] = "Second Brain: Generate"
+            task["command"] = "second-brain generate"
+            changed = True
+    if changed:
+        tasks_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def ensure_private_gitignore(root: Path) -> None:
+    gitignore = root / ".gitignore"
+    text = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+    missing = [entry for entry in (".venv/", "__pycache__/", ".backups/") if entry not in text]
+    if not missing:
+        return
+    separator = "" if not text or text.endswith("\n") else "\n"
+    addition = "\n# Local tooling and migration backups\n" + "\n".join(missing) + "\n"
+    gitignore.write_text(text + separator + addition, encoding="utf-8")
+
+
+def backup_and_replace_private_readme(root: Path, backup_root: Path) -> None:
+    readme = root / "README.md"
+    if readme.exists() and readme.read_text(encoding="utf-8") == PRIVATE_README:
+        return
+    if readme.exists():
+        backup = backup_root / "README.md"
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(readme, backup)
+    readme.write_text(PRIVATE_README, encoding="utf-8")
+
+
+def command_migrate_legacy(args: argparse.Namespace) -> int:
+    root = Path(args.path).expanduser().resolve()
+    if not root.is_dir():
+        print(f"ERROR: data directory does not exist: {root}", file=sys.stderr)
+        return 2
+    if not legacy_layout_present(root):
+        print("No legacy German layout detected; nothing to migrate.")
+        return 0
+    collisions = migration_collisions(root)
+    if collisions:
+        for collision in collisions:
+            print(f"ERROR: {collision}", file=sys.stderr)
+        return 1
+
+    moves = legacy_migration_moves(root)
+    print(f"Legacy migration plan for {root}:")
+    for source, destination in moves:
+        print(f"  MOVE {source.relative_to(root)} -> {destination.relative_to(root)}")
+    print("  REWRITE structural paths, frontmatter keys, and standard headings")
+    print("  REFRESH managed English rules, templates, indexes, and weekly logs")
+    print("  PRESERVE domain prose, project logs, process commands, and custom working style")
+    if args.remove_legacy_tools:
+        print("  REMOVE legacy generator, requirements, and setup script")
+    if not args.apply:
+        print("Dry run only. Re-run with --apply after reviewing this plan.")
+        return 0
+    if git_worktree_dirty(root) and not args.allow_dirty:
+        print(
+            "ERROR: Git worktree is dirty; commit or stash all changes before migration",
+            file=sys.stderr,
+        )
+        return 1
+
+    backup_root = root / ".backups" / datetime.now().strftime("migration-%Y%m%dT%H%M%S%f")
+    apply_legacy_moves(root)
+    rewritten = rewrite_legacy_content(root)
+    removed_generated = remove_generated_files(root)
+    for directory in ("projects", "knowledge", "log", "workflow"):
+        (root / directory).mkdir(parents=True, exist_ok=True)
+    config = root / "second-brain.yml"
+    if not config.exists():
+        config.write_text(f"schema_version: {SCHEMA_VERSION}\n", encoding="utf-8")
+    backup_and_replace_private_readme(root, backup_root)
+    update_editor_tasks(root)
+    ensure_private_gitignore(root)
+    if args.remove_legacy_tools:
+        for name in LEGACY_TOOL_FILES:
+            path = root / name
+            if path.exists():
+                backup = backup_root / name
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, backup)
+                path.unlink()
+
+    upgrade_result = command_upgrade(argparse.Namespace(path=str(root), check=False))
+    if upgrade_result:
+        return upgrade_result
+    findings = check_brain(root)
+    errors = [finding for finding in findings if finding.level == "ERROR"]
+    if errors:
+        for finding in findings:
+            print(finding.render(root))
+        print(f"Migration completed with {len(errors)} validation error(s).", file=sys.stderr)
+        return 1
+    print(
+        f"Migration complete: {len(moves)} move(s), {rewritten} rewritten file(s), "
+        f"{removed_generated} regenerated artifact(s)."
+    )
+    print("Structural names are English; existing domain prose was preserved.")
+    print(
+        "Next: run setup.sh, update project-repository AGENTS.md references, "
+        "and commit the data diff."
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="second-brain")
     parser.add_argument("--version", action="version", version=f"%(prog)s {TOOLKIT_VERSION}")
@@ -735,6 +1027,25 @@ def build_parser() -> argparse.ArgumentParser:
     upgrade_parser.add_argument("path", nargs="?", default=str(DEFAULT_HOME))
     upgrade_parser.add_argument("--check", action="store_true")
     upgrade_parser.set_defaults(func=command_upgrade)
+
+    migration_parser = subparsers.add_parser(
+        "migrate-legacy", help="migrate the original German data layout"
+    )
+    migration_parser.add_argument("path", nargs="?", default=str(DEFAULT_HOME))
+    migration_parser.add_argument(
+        "--apply", action="store_true", help="apply the displayed migration plan"
+    )
+    migration_parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="allow migration with uncommitted Git changes (not recommended)",
+    )
+    migration_parser.add_argument(
+        "--remove-legacy-tools",
+        action="store_true",
+        help="back up and remove the old generator, requirements, and setup script",
+    )
+    migration_parser.set_defaults(func=command_migrate_legacy)
     return parser
 
 

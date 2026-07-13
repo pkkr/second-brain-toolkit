@@ -19,6 +19,8 @@ All notable changes to this project are documented here.
 - Made setup safer and more portable across supported shell platforms.
 - Kept public context-loading rules aligned with the generic parts of the
   private rule set, including conflict handling and selective navigation.
+- Added a dry-run-first migration command for the original German data
+  layout, with collision checks, dirty-worktree protection, and backups.
 
 ## 0.1.0 – 2026-07-13
 

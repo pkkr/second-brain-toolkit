@@ -1,4 +1,5 @@
 import argparse
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,6 +8,7 @@ from unittest.mock import patch
 from second_brain import (
     check_brain,
     command_archive_tasks,
+    command_migrate_legacy,
     command_new_process,
     command_new_project,
     command_upgrade,
@@ -168,6 +170,120 @@ class SecondBrainTests(unittest.TestCase):
         backups = list((self.root / ".backups").rglob("AGENTS.md"))
         self.assertEqual(1, len(backups))
         self.assertEqual("custom managed content\n", backups[0].read_text(encoding="utf-8"))
+
+    def test_legacy_migration_standardizes_structure_and_preserves_prose(self):
+        project = self.root / "projekte/sample"
+        processes = project / "prozesse"
+        workflow = self.root / "workflow"
+        processes.mkdir(parents=True)
+        workflow.mkdir(parents=True)
+        (self.root / "AGENTS.md").write_text("legacy rules\n", encoding="utf-8")
+        (self.root / "README.md").write_text("legacy readme\n", encoding="utf-8")
+        (self.root / "inbox.md").write_text("# Inbox\n", encoding="utf-8")
+        (self.root / "connect_neurons.py").write_text("legacy tool\n", encoding="utf-8")
+        (self.root / "requirements.txt").write_text("pyyaml\n", encoding="utf-8")
+        (self.root / "setup.sh").write_text("legacy setup\n", encoding="utf-8")
+        (project / "projekt.md").write_text(
+            "---\ntitle: Beispiel\ndescription: Deutscher Inhalt\ntype: project\n"
+            "repo: git@example.test:org/sample.git\npfad: ~/code/sample\nstatus: aktiv\n---\n\n"
+            "# Beispiel\n\n## Ziel\n\nDeutsche Fachtexte bleiben erhalten.\n\n"
+            "## Stack & Architektur\n\nDetails.\n\n## Entscheidungen\n\nKeine.\n\n"
+            "## Offene Themen\n\n- [ ] Aufgabe\n",
+            encoding="utf-8",
+        )
+        (project / "prozesse.md").write_text(
+            "---\ntitle: Prozesse\ndescription: Router\ntype: guide\n---\n\n# Prozesse\n\n"
+            "| Auslöser | Prozess | Zuletzt geprüft |\n|---|---|---|\n"
+            "| Deploy | [Deploy](prozesse/deploy.md) | 2026-07-14 |\n",
+            encoding="utf-8",
+        )
+        (processes / "deploy.md").write_text(
+            "---\ntitle: Deploy\ndescription: Exakter Ablauf\ntype: guide\n---\n\n"
+            "# Deploy\n\n1. `deploy --exact`\n",
+            encoding="utf-8",
+        )
+        (workflow / "vorgehen.md").write_text(
+            "---\ntitle: Vorgehen\ndescription: Persönliche Regeln\ntype: guide\n---\n\n"
+            "# Vorgehen\n\nDeutsch als Arbeitssprache.\n",
+            encoding="utf-8",
+        )
+        (self.root / "index.md").write_text("# stale\n", encoding="utf-8")
+
+        dry_run = argparse.Namespace(
+            path=str(self.root),
+            apply=False,
+            allow_dirty=False,
+            remove_legacy_tools=True,
+        )
+        self.assertEqual(0, command_migrate_legacy(dry_run))
+        self.assertTrue((project / "projekt.md").exists())
+
+        apply = argparse.Namespace(
+            path=str(self.root),
+            apply=True,
+            allow_dirty=False,
+            remove_legacy_tools=True,
+        )
+        self.assertEqual(0, command_migrate_legacy(apply))
+
+        migrated = self.root / "projects/sample/project.md"
+        text = migrated.read_text(encoding="utf-8")
+        self.assertIn("path: ~/code/sample", text)
+        self.assertIn("status: active", text)
+        self.assertIn("## Open items", text)
+        self.assertIn("Deutsche Fachtexte bleiben erhalten.", text)
+        self.assertTrue((self.root / "projects/sample/processes/deploy.md").exists())
+        self.assertIn(
+            "processes/deploy.md",
+            (self.root / "projects/sample/processes.md").read_text(encoding="utf-8"),
+        )
+        self.assertIn(
+            "Deutsch als Arbeitssprache.",
+            (self.root / "workflow/working-style.md").read_text(encoding="utf-8"),
+        )
+        self.assertFalse((self.root / "connect_neurons.py").exists())
+        self.assertTrue(list((self.root / ".backups").rglob("connect_neurons.py")))
+        self.assertIn(".backups/", (self.root / ".gitignore").read_text(encoding="utf-8"))
+        self.assertEqual([], self.errors())
+
+    def test_legacy_migration_refuses_dirty_git_worktree(self):
+        legacy = self.root / "projekte/sample"
+        legacy.mkdir(parents=True)
+        marker = legacy / "projekt.md"
+        marker.write_text("tracked\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "init", "-b", "main", str(self.root)],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.root), "config", "user.email", "test@example.test"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.root), "config", "user.name", "Test User"],
+            check=True,
+        )
+        subprocess.run(["git", "-C", str(self.root), "add", "."], check=True)
+        subprocess.run(
+            ["git", "-C", str(self.root), "commit", "-m", "fixture"],
+            check=True,
+            capture_output=True,
+        )
+        marker.write_text("dirty\n", encoding="utf-8")
+
+        result = command_migrate_legacy(
+            argparse.Namespace(
+                path=str(self.root),
+                apply=True,
+                allow_dirty=False,
+                remove_legacy_tools=False,
+            )
+        )
+
+        self.assertEqual(1, result)
+        self.assertTrue((self.root / "projekte").exists())
+        self.assertFalse((self.root / "projects").exists())
 
 
 if __name__ == "__main__":

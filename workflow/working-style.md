@@ -55,7 +55,7 @@ corresponding project notes.
   fallback.
 - Keep `processes.md` as a router and detailed recurring workflows under
   `processes/`.
-- Generate indexes with `connect_neurons.py`; never edit them manually.
+- Generate indexes with `second-brain generate`; never edit them manually.
 
 ## Python
 

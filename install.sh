@@ -12,7 +12,7 @@ REPLACE_LINKS=0
 
 usage() {
     cat <<'EOF'
-Usage: ./setup.sh [options]
+Usage: ./install.sh [options]
 
 Options:
   --data-dir PATH    Private data repository (default: ~/second-brain)
@@ -151,9 +151,9 @@ elif [ -e "$ALIAS_PATH" ] && legacy_layout_at "$ALIAS_PATH"; then
 fi
 if [ -n "$LEGACY_PATH" ]; then
     echo "ERROR: legacy German data layout detected at $LEGACY_PATH" >&2
-    echo "Preview the migration before running setup:" >&2
+    echo "Preview the migration before running the installer:" >&2
     echo "  $PWD/second-brain migrate-legacy \"$LEGACY_PATH\" --remove-legacy-tools" >&2
-    echo "After committing the data repo, apply it with --apply and re-run setup." >&2
+    echo "After committing the data repo, apply it with --apply and re-run install.sh." >&2
     exit 1
 fi
 
@@ -192,13 +192,13 @@ else
     if [ -L "$ALIAS_PATH" ]; then
         if [ "$(resolved_path "$ALIAS_PATH")" != "$(resolved_path "$SOURCE_DATA_DIR")" ]; then
             echo "ERROR: $ALIAS_PATH points to a different data location." >&2
-            echo "Setup will not replace or merge unrelated personal data." >&2
+            echo "Installer will not replace or merge unrelated personal data." >&2
             exit 1
         fi
     elif [ -e "$ALIAS_PATH" ] && [ -e "$SOURCE_DATA_DIR" ] \
         && [ "$(resolved_path "$ALIAS_PATH")" != "$(resolved_path "$SOURCE_DATA_DIR")" ]; then
         echo "ERROR: both $SOURCE_DATA_DIR and $ALIAS_PATH contain data." >&2
-        echo "Setup will not merge or overwrite private repositories." >&2
+        echo "Installer will not merge or overwrite private repositories." >&2
         exit 1
     fi
 fi

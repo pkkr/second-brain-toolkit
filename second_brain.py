@@ -280,9 +280,13 @@ def validate_secrets(root: Path) -> list[Finding]:
     return findings
 
 
-def check_brain(root: Path, include_generated: bool = True) -> list[Finding]:
+def check_brain(
+    root: Path,
+    include_generated: bool = True,
+    include_config: bool = True,
+) -> list[Finding]:
     findings = (
-        validate_config(root)
+        (validate_config(root) if include_config else [])
         + validate_frontmatter(root)
         + validate_links(root)
         + validate_projects(root)
@@ -402,7 +406,11 @@ def command_check(args: argparse.Namespace) -> int:
     if not root.is_dir():
         print(f"ERROR: data directory does not exist: {root}", file=sys.stderr)
         return 2
-    findings = check_brain(root, include_generated=not args.skip_generated)
+    findings = check_brain(
+        root,
+        include_generated=not args.skip_generated,
+        include_config=not args.skip_config,
+    )
     for finding in findings:
         print(finding.render(root))
     errors = sum(finding.level == "ERROR" for finding in findings)
@@ -430,7 +438,12 @@ def command_doctor(args: argparse.Namespace) -> int:
     if not root.is_dir():
         return 1
     return command_check(
-        argparse.Namespace(path=str(root), strict=False, skip_generated=False)
+        argparse.Namespace(
+            path=str(root),
+            strict=False,
+            skip_generated=False,
+            skip_config=False,
+        )
     )
 
 
@@ -955,7 +968,7 @@ def command_migrate_legacy(args: argparse.Namespace) -> int:
     )
     print("Structural names are English; existing domain prose was preserved.")
     print(
-        "Next: run setup.sh, update project-repository AGENTS.md references, "
+        "Next: run install.sh, update project-repository AGENTS.md references, "
         "and commit the data diff."
     )
     return 0
@@ -984,6 +997,11 @@ def build_parser() -> argparse.ArgumentParser:
     check_parser.add_argument("path", nargs="?", default=str(DEFAULT_HOME))
     check_parser.add_argument("--strict", action="store_true", help="treat warnings as failures")
     check_parser.add_argument("--skip-generated", action="store_true")
+    check_parser.add_argument(
+        "--skip-config",
+        action="store_true",
+        help="validate content outside a complete Second Brain data repository",
+    )
     check_parser.set_defaults(func=command_check)
 
     doctor_parser = subparsers.add_parser("doctor", help="diagnose installation and data issues")

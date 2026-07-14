@@ -96,7 +96,7 @@ with these additional conventions:
   `description`, and `type`.
 - Use standard Markdown links, not wikilinks. Convert legacy wikilinks
   when encountered.
-- `connect_neurons.py` generates each folder's `index.md` and the
+- `second-brain generate` generates each folder's `index.md` and the
   global `log/` roll-up. Never edit generated files by hand.
 
 ## Progress log and tasks

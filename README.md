@@ -89,14 +89,14 @@ to agents. Personal data is never added to the public toolkit history.
 - Git, strongly recommended for private history and multi-machine sync
 
 The Python CLI itself can also be installed manually on Windows, but the
-Bash setup script targets macOS, Linux, and WSL.
+Bash installer targets macOS, Linux, and WSL.
 
 ## Quick start
 
 ```bash
 git clone https://github.com/pkkr/second-brain-toolkit.git ~/second-brain-toolkit
 cd ~/second-brain-toolkit
-./setup.sh
+./install.sh
 ```
 
 The interactive installer:
@@ -149,7 +149,7 @@ second-brain doctor
 
 Alternatively, install into a dedicated virtual environment with
 `python -m pip install .`. Manual installation does not create the
-stable data symlink or agent-tool adapters provided by `setup.sh`;
+stable data symlink or agent-tool adapters provided by `install.sh`;
 `pipx` exposes the CLI through its own bin directory. The example above
 stores data directly at the stable path.
 
@@ -158,17 +158,17 @@ stores data directly at the stable path.
 Preview everything without changing the filesystem:
 
 ```bash
-./setup.sh --dry-run
+./install.sh --dry-run
 ```
 
 For unattended installs, select the location mode explicitly:
 
 ```bash
-./setup.sh --data-mode symlink
-./setup.sh --data-mode move
+./install.sh --data-mode symlink
+./install.sh --data-mode move
 ```
 
-All setup options:
+All installer options:
 
 | Option | Effect |
 |---|---|
@@ -184,20 +184,20 @@ Examples:
 
 ```bash
 # Recommended installation with a separate private Git history
-./setup.sh --data-mode symlink --init-git
+./install.sh --data-mode symlink --init-git
 
 # Use a custom physical data location
-./setup.sh --data-dir ~/Documents/agent-memory --data-mode symlink
+./install.sh --data-dir ~/Documents/agent-memory --data-mode symlink
 
 # Keep every agent-tool integration manual
-./setup.sh --no-agent-links
+./install.sh --no-agent-links
 
 # Local-only fallback inside the toolkit checkout; /private is Git-ignored
-./setup.sh --data-dir ./private --data-mode symlink
+./install.sh --data-dir ./private --data-mode symlink
 ```
 
 `--replace-links` does not authorize data-directory merging. If both the
-selected source and `~/.second-brain` contain data, setup stops before
+selected source and `~/.second-brain` contain data, installation stops before
 creating the Python environment or changing either directory.
 
 ## Create the first project memory
@@ -243,8 +243,10 @@ Replace `<name>` with `example-app`. This gives repository-aware agents a
 stable pointer to the private context without copying that context into
 the project repository.
 
-The filled-in [`projects/example-project/`](projects/example-project/)
-directory demonstrates the complete format.
+The filled-in
+[`examples/second-brain/projects/example-project/`](examples/second-brain/projects/example-project/)
+directory demonstrates the complete format inside a self-contained
+sample data repository.
 
 ## Record a recurring workflow
 
@@ -345,7 +347,7 @@ the public toolkit.
 
 ## Private data layout
 
-`second-brain init` and `setup.sh` create only missing files and preserve
+`second-brain init` and `install.sh` create only missing files and preserve
 existing notes.
 
 | Location | Contents |
@@ -420,7 +422,7 @@ export SECOND_BRAIN_HOME=~/Documents/agent-memory
 | `second-brain init [PATH] [--git]` | Create missing private-data structure; preserve existing files; optionally initialize a private Git repository |
 | `second-brain generate [PATH]` | Generate folder indexes and cross-project weekly logs |
 | `second-brain generate [PATH] --check` | Report generated drift without writing files; suitable for CI |
-| `second-brain check [PATH] [--strict] [--skip-generated]` | Validate the data repository; strict mode treats warnings as failures |
+| `second-brain check [PATH] [--strict] [--skip-generated] [--skip-config]` | Validate a data repository or standalone content; strict mode treats warnings as failures |
 | `second-brain doctor [PATH]` | Check Python, Git, directory existence/writability, stable-path resolution, and repository validity |
 | `second-brain new-project NAME [options]` | Create a project summary, process router, process directory, and log |
 | `second-brain new-process PROJECT NAME --trigger TEXT [options]` | Create a detailed workflow and add it to the process router |
@@ -487,6 +489,9 @@ second-brain check --strict
 # Validate source content without checking generated drift
 second-brain check --skip-generated
 
+# Validate standalone content that is not a complete data repository
+second-brain check PATH --skip-generated --skip-config
+
 # CI-safe generated-file check with no writes
 second-brain generate --check
 ```
@@ -542,8 +547,8 @@ small adapter layer.
 
 | Tool | Integration |
 |---|---|
-| Claude Code | Setup can link the public `AGENTS.md` rules to `~/.claude/CLAUDE.md` |
-| GitHub Copilot in VS Code | Setup can install the Copilot bridge in the detected user profile |
+| Claude Code | The installer can link the public `AGENTS.md` rules to `~/.claude/CLAUDE.md` |
+| GitHub Copilot in VS Code | The installer can install the Copilot bridge in the detected user profile |
 | Codex, Cursor, and repository-aware agents | Add a repository-level `AGENTS.md` based on the provided template |
 | Other agents | Point their instruction mechanism to `~/.second-brain/AGENTS.md` and the active project's notes |
 
@@ -551,7 +556,7 @@ Existing unrelated tool files and symlinks are skipped unless
 `--replace-links` is explicitly supplied. A replaced regular adapter
 file receives a timestamped backup beside the original.
 
-Use `./setup.sh --no-agent-links` when all tool configuration should
+Use `./install.sh --no-agent-links` when all tool configuration should
 remain manual.
 
 ## Multiple machines
@@ -562,13 +567,13 @@ Keep two independent histories:
 2. Synchronize private memory through a private Git remote or another
    approved private storage system.
 
-Example setup on an additional machine:
+Example installation on an additional machine:
 
 ```bash
 git clone https://github.com/pkkr/second-brain-toolkit.git ~/second-brain-toolkit
 git clone <private-remote> ~/second-brain
 cd ~/second-brain-toolkit
-./setup.sh --data-dir ~/second-brain --data-mode symlink
+./install.sh --data-dir ~/second-brain --data-mode symlink
 second-brain upgrade --check
 second-brain doctor
 ```
@@ -607,10 +612,11 @@ Run the complete local checks:
 
 ```bash
 .venv/bin/python -m unittest discover -s tests
-bash tests/test_setup.sh
-bash -n setup.sh second-brain tests/test_setup.sh
-.venv/bin/python second_brain.py check . --strict
-.venv/bin/python connect_neurons.py --check .
+bash tests/test_install.sh
+bash -n install.sh second-brain tests/test_install.sh
+.venv/bin/python second_brain.py check . --strict --skip-generated --skip-config
+.venv/bin/python second_brain.py check examples/second-brain --strict
+.venv/bin/python second_brain.py generate examples/second-brain --check
 .venv/bin/python -m pip wheel --no-deps --wheel-dir dist .
 ```
 

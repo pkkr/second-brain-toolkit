@@ -24,6 +24,11 @@ All notable changes to this project are documented here.
 - Added an interactive setup choice between a recommended stable
   symlink and physically storing the private repository at
   `~/.second-brain`, with deterministic flags and conflict protection.
+- Renamed the bootstrap script to `install.sh` and moved the tracked
+  sample data repository under `examples/second-brain/` so public
+  toolkit code and demonstration content are easier to distinguish.
+- Removed the redundant root `requirements.txt`; package dependencies
+  are defined exclusively in `pyproject.toml`.
 
 ## 0.1.0 – 2026-07-13
 

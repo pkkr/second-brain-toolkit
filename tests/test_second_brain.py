@@ -34,6 +34,21 @@ class SecondBrainTests(unittest.TestCase):
         initialize_brain(self.root)
         self.assertEqual([], self.errors())
 
+    def test_config_validation_can_be_skipped_for_non_vault_content(self):
+        self.root.mkdir()
+        (self.root / "note.md").write_text(
+            "---\ntitle: Note\ndescription: Note\ntype: note\n---\n",
+            encoding="utf-8",
+        )
+
+        findings = check_brain(
+            self.root,
+            include_generated=False,
+            include_config=False,
+        )
+
+        self.assertEqual([], findings)
+
     def test_initialization_preserves_custom_working_style(self):
         initialize_brain(self.root)
         working_style = self.root / "workflow/working-style.md"

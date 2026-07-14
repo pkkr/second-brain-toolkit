@@ -42,13 +42,13 @@ prose, project logs, and exact process commands.
 5. Install the stable alias, CLI command, and optional agent adapters:
 
    ```bash
-   ./setup.sh --data-dir ~/second-brain
+   ./install.sh --data-dir ~/second-brain
    ```
 
-   Setup asks whether to keep the repository there and create the
+   The installer asks whether to keep the repository there and create the
    stable `~/.second-brain` symlink (recommended), or physically move
    the repository to `~/.second-brain`. For an unattended migration,
-   pass `--data-mode symlink` or `--data-mode move`. Setup refuses to
+   pass `--data-mode symlink` or `--data-mode move`. The installer refuses to
    merge or overwrite two existing data locations.
 
 6. Update repository-level `AGENTS.md` references:
@@ -86,7 +86,7 @@ When toolkit code and personal data still share one repository:
    generated global log directory.
 3. Keep the public toolkit checkout at a different path such as
    `~/second-brain-toolkit`.
-4. Follow the setup and validation steps above.
+4. Follow the installation and validation steps above.
 5. Remove personal files from the public repository only after the
    private copy and backup have been verified.
 

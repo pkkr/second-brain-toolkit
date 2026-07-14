@@ -15,6 +15,6 @@ if [ -x .venv/bin/python ]; then
 elif [ -x .venv/Scripts/python.exe ]; then
     exec .venv/Scripts/python.exe second_brain.py "$@"
 else
-    echo "ERROR: run setup.sh to create the Python environment" >&2
+    echo "ERROR: run install.sh to create the Python environment" >&2
     exit 1
 fi

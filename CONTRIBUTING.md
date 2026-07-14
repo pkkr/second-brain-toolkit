@@ -20,9 +20,12 @@ python3 -m venv .venv
 
 ```bash
 .venv/bin/python -m unittest discover -s tests
-.venv/bin/python second_brain.py check . --strict
-.venv/bin/python connect_neurons.py .
-.venv/bin/python connect_neurons.py --check .
+bash tests/test_install.sh
+bash -n install.sh second-brain tests/test_install.sh
+.venv/bin/python second_brain.py check . --strict --skip-generated --skip-config
+.venv/bin/python second_brain.py check examples/second-brain --strict
+.venv/bin/python second_brain.py generate examples/second-brain
+.venv/bin/python second_brain.py generate examples/second-brain --check
 ```
 
 Commit generated indexes when their source notes change. Never include

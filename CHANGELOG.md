@@ -21,6 +21,9 @@ All notable changes to this project are documented here.
   private rule set, including conflict handling and selective navigation.
 - Added a dry-run-first migration command for the original German data
   layout, with collision checks, dirty-worktree protection, and backups.
+- Added an interactive setup choice between a recommended stable
+  symlink and physically storing the private repository at
+  `~/.second-brain`, with deterministic flags and conflict protection.
 
 ## 0.1.0 – 2026-07-13
 

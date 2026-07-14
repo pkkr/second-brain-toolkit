@@ -37,10 +37,11 @@ cd ~/second-brain-toolkit
 The setup script:
 
 1. Creates a local Python environment.
-2. Initializes or reuses the separate private repository at
-   `~/second-brain`.
-3. Links that directory to `~/.second-brain` so project instructions do
-   not depend on the toolkit's installation path.
+2. Asks whether to keep private data at `~/second-brain` and expose it
+   through a symlink (recommended), or move/store it directly at
+   `~/.second-brain`.
+3. Initializes or reuses the separate private data repository at the
+   selected location.
 4. Installs a `second-brain` command under `~/.local/bin` when that path
    is available.
 5. Adds optional agent-tool links without overwriting unrelated files.
@@ -57,6 +58,17 @@ To give the private data its own local Git history:
 ./setup.sh --init-git
 ```
 
+For unattended installs, select the data-location mode explicitly:
+
+```bash
+./setup.sh --data-mode symlink  # Keep ~/second-brain; link ~/.second-brain to it
+./setup.sh --data-mode move     # Move/store the repository at ~/.second-brain
+```
+
+The installer never merges two existing data directories or overwrites
+an unrelated target. The symlink mode is the safe default when no
+interactive terminal is available.
+
 Only connect the Second Brain data repository to a **private** remote.
 It remains independent from the public toolkit history.
 
@@ -65,8 +77,8 @@ It remains independent from the public toolkit history.
 | Location | Purpose | Public repository |
 |---|---|---|
 | Toolkit root | CLI, rules, templates, examples, tests | Tracked |
-| `~/second-brain` | Personal projects, knowledge, inbox, and logs | Separate private repository |
-| `~/.second-brain` | Stable link to the selected private directory | Outside the repository |
+| `~/second-brain` | Recommended private-repository location in symlink mode | Separate private repository |
+| `~/.second-brain` | Stable access path: either a symlink or the physical private repository | Outside the public repository |
 
 For a local-only fallback, `./setup.sh --data-dir ./private` remains
 available; that directory is ignored by the toolkit repository. The
@@ -186,16 +198,17 @@ virtual environment and installing the project with `pip install -e .`.
 There are two independent histories:
 
 1. Pull toolkit updates from the public toolkit repository.
-2. Synchronize `~/second-brain` through its private repository or an
-   approved private storage system.
+2. Synchronize the private data repository through a private remote or
+   an approved private storage system, whether it physically lives at
+   `~/second-brain` or `~/.second-brain`.
 
 After pulling toolkit updates, run `second-brain upgrade --check` and
 then `second-brain upgrade` to apply reviewed rule and template changes.
 Customized `workflow/working-style.md` is never replaced.
 
-Run `./setup.sh --data-dir PATH` on each machine to recreate the stable
-`~/.second-brain` link. Never add personal Second Brain data to the
-public toolkit repository.
+Run `./setup.sh --data-dir PATH` on each machine and choose the desired
+location mode. Project instructions can always use `~/.second-brain`.
+Never add personal Second Brain data to the public toolkit repository.
 
 Existing installations can follow [MIGRATING.md](MIGRATING.md).
 

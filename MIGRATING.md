@@ -45,6 +45,12 @@ prose, project logs, and exact process commands.
    ./setup.sh --data-dir ~/second-brain
    ```
 
+   Setup asks whether to keep the repository there and create the
+   stable `~/.second-brain` symlink (recommended), or physically move
+   the repository to `~/.second-brain`. For an unattended migration,
+   pass `--data-mode symlink` or `--data-mode move`. Setup refuses to
+   merge or overwrite two existing data locations.
+
 6. Update repository-level `AGENTS.md` references:
 
    - `~/second-brain/` → `~/.second-brain/`
@@ -89,7 +95,7 @@ When toolkit code and personal data still share one repository:
 If the data directory is not already a Git repository:
 
 ```bash
-cd ~/second-brain
+cd ~/.second-brain
 git init -b main
 git add .
 git commit -m "Initialize private Second Brain"

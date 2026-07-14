@@ -27,3 +27,4 @@ jobs:
       - run: python -m pip wheel --no-deps --wheel-dir dist .
       - run: bash -n setup.sh second-brain
       - run: ./setup.sh --dry-run
+      - run: bash tests/test_setup.sh
